@@ -1,0 +1,8 @@
+ofxNetwork
+ofxOsc
+ofxXmlSettings
+ofxAnimatable
+ofxEasyRetina
+ofxFTGLES
+ofxSettings
+ofxUI
