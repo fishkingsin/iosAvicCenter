@@ -27,18 +27,29 @@ public:
     }
 	void initScrollable()
 	{
+		
 		ofAddListener(ofEvents().update, this, &MyScrollview::update);
 		currentPageX.setRepeatType(PLAY_ONCE);
 		currentPageX.setCurve(EASE_OUT);
 		currentPageX.setDuration(DURATION);
 		
-		fontsize = 24;
+		fontsize = 18;
 		font.loadFont("GUI/NewMedia Fett.ttf", fontsize);
 		fbo.allocate( rect.width,rect.height);
-		for(int i = 0  ; i < 30 ; i++)
-		{
-			items.push_back("LABLE");
-		}
+		
+		ofBuffer items_buffer = ofBufferFromFile("items.txt");
+		items = ofSplitString(items_buffer.getText(),"\n");
+		
+//		ofLogVerbose() <<"items_buffer " << items_buffer.getText();
+//		for(int i = 0  ; i < items.size() ; i++)
+//		{
+//			ofLogVerbose() <<"items "<< i << " : " << items[i];
+//		}
+//		for(int i = 0  ; i < items.size()  ; i++)
+//		{
+//			string st = items[i];
+//			items.push_back(st);
+//		}
 		
 		hightLightIdx = 0;
 		itemHeight = fontsize+10;
@@ -127,7 +138,12 @@ public:
 			ofPushStyle();
 			
 				ofSetColor(255);
+			ofPushMatrix();
+			ofPushStyle();
+//			ofScale(0.5,0.5);
 			font.drawString(ofToString(i),0,(i*itemHeight)+itemHeight);
+			ofPopStyle();
+			ofPopMatrix();
 			ofRectangle _rect =  font.getStringBoundingBox(items[i], 0, 0);
 			font.drawString(items[i], rect.width*0.5-_rect.width*0.5, (i*itemHeight)+itemHeight );
 			ofPopStyle();
