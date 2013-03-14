@@ -3,11 +3,16 @@
 #include "ofMain.h"
 #include "ofxiPhone.h"
 #include "ofxiPhoneExtras.h"
-#define OF_VERSION  7 
+//include both these files!
+#include "ofxEasyRetina.h"
+#include "ofxiOSEAGLView+retinaPatch.h"
+#define OF_VERSION  7
 #define OF_VERSION_MINOR 4
 #include "ofxUI.h"
 #include "ofxNetwork.h"
 #include "MyScrollview.h"
+#define DURATION 3
+#define LARGE_GUI_WIDTH 288
 class testApp : public ofxiPhoneApp{
 	
 public:
@@ -51,6 +56,17 @@ public:
 	ofRectangle subGUIRect;
 	MyScrollview * scroll;
 	void scrollEvent(MyScrollViewEventArgs &e);
+	float coolDown;
+	bool isCoolDown();
+void overHeat();
+ofSoundPlayer  sFX;
+	
+	
+	//declare an ofxEasyRetina instance
+	ofxEasyRetina retina;
+	
+	vector<ofVec2f> touches;
+
 };
 
 

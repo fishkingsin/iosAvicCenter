@@ -2,7 +2,7 @@
 #include "Settings.h"
 //--------------------------------------------------------------
 void testApp::setup(){
-	subGUIRect.set(228,140,535,883);
+	subGUIRect.set(303,230,399,722);
 	// initialize the accelerometer
 	ofxAccelerometer.setup();
 	ofSetLogLevel(OF_LOG_VERBOSE);
@@ -40,7 +40,11 @@ void testApp::setup(){
 	
 	tcpClient.setVerbose(true);
 	
+	sFX.loadSound("CLICK17C.wav");
+	sFX.setVolume(0.5);
 	
+	retina.setNearestMagnification(); // just to make more obvious when using non-retina on a retina screen
+
 }
 void testApp::exit()
 {
@@ -52,7 +56,18 @@ void testApp::exit()
 void testApp::scrollEvent(MyScrollViewEventArgs &e)
 {
 	ofLogVerbose() << "scrollEvent: " << "Index: " << e.index;
+	
 	tcpClient.send("ZONE_4_MAIN_"+ofToString(e.index));
+}
+bool testApp::isCoolDown()
+{
+	bool cooldown = abs(coolDown -ofGetElapsedTimef())>DURATION;
+	if(cooldown)sFX.play();
+	return  cooldown;
+}
+void  testApp::overHeat()
+{
+	coolDown  = ofGetElapsedTimef();
 }
 //--------------------------------------------------------------
 void testApp::guiEvent(ofxUIEventArgs &e)
@@ -113,8 +128,12 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 	if(name == "BUTTON_UP"){
 		if(!((ofxUIButton*)e.widget)->getValue())
 		{
+			if(isCoolDown())
+			{
+				overHeat();
 			scroll->prevItem();
 			ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
+			}
 		}
 //		scroll->mousePressed(ofRandom(subGUIRect.x,subGUIRect.x+subGUIRect.width), ofRandom(subGUIRect.y,subGUIRect.y+subGUIRect.height), 0);
 //		scroll->mouseDragged(ofRandom(subGUIRect.x,subGUIRect.x+subGUIRect.width), ofRandom(subGUIRect.y,subGUIRect.y+subGUIRect.height), 0);
@@ -124,14 +143,33 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 	if(name == "BUTTON_DOWN"){
 		if(!((ofxUIButton*)e.widget)->getValue())
 		{
+			if(isCoolDown())
+			{
+				overHeat();
 			scroll->nextItem();
-		ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
+			ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
+			}
 		}
 		
 	}
 	if(name == "RESET_ALL")
 	{
+		scroll->reset();
 		tcpClient.send(name);
+	}
+	if(name == "Z4_RESET")
+	{
+		scroll->reset();
+		tcpClient.send("ZONE_4_MAIN_"+ofToString(0));
+	}
+	if(name == "Z2_RESET")
+	{
+	}
+	if(name == "Z3_RESET")
+	{
+	}
+	if(name == "Z5_RESET")
+	{
 	}
 
 	
@@ -153,11 +191,12 @@ void testApp::update(){
 			connectTime = ofGetElapsedTimeMillis();
 		}
 		
-	}
+	}	
 }
 
 //--------------------------------------------------------------
 void testApp::draw(){
+	retina.setupScreenOrtho();
 //	ofBackground(255);
 	if(gui2->isVisible())backgrounds[0].draw(0, 0);
 	if(gui3->isVisible())backgrounds[1].draw(0, 0);
@@ -259,7 +298,10 @@ void testApp::setGUI2(){
 	gui2 = new ofxUICanvas(subGUIRect);
 	gui2->setVisible(true);
 		gui2->addWidgetDown(new ofxUILabel("PANEL ZONE2", OFX_UI_FONT_LARGE));
-	
+	ofxUIToggle * togle = new ofxUIToggle("Z2_RESET", false, LARGE_GUI_WIDTH, 61);
+	togle->setLabelVisible(false);
+	gui2->addWidget(togle);
+
 	
 	ofAddListener(gui2->newGUIEvent,this,&testApp::guiEvent);
 }//--------------------------------------------------------------
@@ -269,15 +311,19 @@ void testApp::setGUI3(){
 	gui3 = new ofxUICanvas(subGUIRect);
 	gui3->setVisible(false);
 		gui3->addWidgetDown(new ofxUILabel("PANEL ZONE3", OFX_UI_FONT_LARGE));
+	ofxUIToggle * togle = new ofxUIToggle("Z3_RESET", false, LARGE_GUI_WIDTH, 61);
+	togle->setLabelVisible(false);
+	gui3->addWidget(togle);
+
 	ofAddListener(gui3->newGUIEvent,this,&testApp::guiEvent);
 }//--------------------------------------------------------------
 void testApp::setGUI4(){
 
-	scroll = new MyScrollview(303,408,399,301);
+	scroll = new MyScrollview(304,408,399,301);
 	ofAddListener(scroll->newGUIEvent,this,&testApp::scrollEvent);
-	gui4 = new ofxUICanvas(303,230,399,722);
+	gui4 = new ofxUICanvas(subGUIRect);
 	
-	ofxUIToggle * togle = new ofxUIToggle("Z4_START", false, scroll->rect.getWidth(), 61);
+	ofxUIToggle * togle = new ofxUIToggle("Z4_RESET", false, LARGE_GUI_WIDTH, 61);
 	togle->setLabelVisible(false);
 	gui4->addWidget(togle);
 	gui4->setVisible(false);
@@ -296,20 +342,13 @@ void testApp::setGUI4(){
 }//--------------------------------------------------------------
 void testApp::setGUI5(){
 
-//	scroll = new MyScrollview(303,408,399,301);
 	gui5 = new ofxUICanvas(subGUIRect);
-//	gui5->addWidgetDown(new ofxUILabel("PANEL ZONE5", OFX_UI_FONT_LARGE));
-//	ofxUIButton * button = new ofxUIButton("BUTTON_UP", false, scroll->rect.getWidth(), 61,scroll->rect.getX(),0);
-//	button->setLabelVisible(false);
-//	
-//	gui5->addWidget(button);
-//	
-//
-//	button = new ofxUIButton("BUTTON_DOWN", false, scroll->rect.getWidth(), 61,scroll->rect.getX(),scroll->rect.getY()+scroll->rect.getHeight());
-//	button->setLabelVisible(false);
-//	
-//	gui5->addWidget(button);
+	
+	ofxUIToggle * togle = new ofxUIToggle("Z5_RESET", false, LARGE_GUI_WIDTH, 61);
+	togle->setLabelVisible(false);
+	gui5->addWidget(togle);
 
+	
 	gui5->setVisible(false);
 	ofAddListener(gui5->newGUIEvent,this,&testApp::guiEvent);
 
