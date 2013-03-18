@@ -1,0 +1,15 @@
+<Widget>
+    <Kind>31</Kind>
+    <Name>ZONE2_CURTAIN</Name>
+    <Value>0</Value>
+</Widget>
+<Widget>
+    <Kind>31</Kind>
+    <Name>ZONE2_LIGHT</Name>
+    <Value>0</Value>
+</Widget>
+<Widget>
+    <Kind>31</Kind>
+    <Name>ZONE2_DOOR_ON</Name>
+    <Value>0</Value>
+</Widget>

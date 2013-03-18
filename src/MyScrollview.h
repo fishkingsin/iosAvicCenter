@@ -11,7 +11,7 @@
 #include "ofxUI.h"
 #include "ofxAnimatableFloat.h"
 #include "ofxTrueTypeFontUC.h"
-#define DURATION 1
+#define DEFAULT_DURATION 1
 class MyScrollViewEventArgs : public ofEventArgs
 {
 public:
@@ -29,31 +29,41 @@ public:
 	{
 		
 		ofAddListener(ofEvents().update, this, &MyScrollview::update);
-		currentPageX.setRepeatType(PLAY_ONCE);
-		currentPageX.setCurve(EASE_OUT);
-		currentPageX.setDuration(DURATION);
+		currentListY.setRepeatType(PLAY_ONCE);
+		currentListY.setCurve(EASE_OUT);
+		currentListY.setDuration(DEFAULT_DURATION);
 		
-		fontsize = 18;
-		font.loadFont("GUI/NewMedia Fett.ttf", fontsize);
+		//		fontsize = 16;
+		//		font.loadFont("GUI/STHeiti Light.ttc", fontsize , true);
 		fbo.allocate( rect.width,rect.height);
 		
-		ofBuffer items_buffer = ofBufferFromFile("items.txt");
-		items = ofSplitString(items_buffer.getText(),"\n");
+		//retrive folder images
+		ofDirectory dir;
+		dir.allowExt("png");
+		int n = dir.listDir("GUI/images/Zone4_content_list");
+		for(int i = 0 ; i < n ; i ++)
+		{
+			items.push_back(ofImage());
+			items.back().loadImage(dir.getPath(i));
+		}
+		//		ofBuffer items_buffer = ofBufferFromFile("items.txt");
+		//		items = ofSplitString(items_buffer.getText(),"\n");
 		
-//		ofLogVerbose() <<"items_buffer " << items_buffer.getText();
-//		for(int i = 0  ; i < items.size() ; i++)
-//		{
-//			ofLogVerbose() <<"items "<< i << " : " << items[i];
-//		}
-//		for(int i = 0  ; i < items.size()  ; i++)
-//		{
-//			string st = items[i];
-//			items.push_back(st);
-//		}
+		//		ofLogVerbose() <<"items_buffer " << items_buffer.getText();
+		//		for(int i = 0  ; i < items.size() ; i++)
+		//		{
+		//			ofLogVerbose() <<"items "<< i << " : " << items[i];
+		//		}
+		//		for(int i = 0  ; i < items.size()  ; i++)
+		//		{
+		//			string st = items[i];
+		//			items.push_back(st);
+		//		}
 		
 		hightLightIdx = 0;
-		itemHeight = fontsize+10;
-		canNotMoreThen = (fbo.getHeight()/itemHeight)*0.45;
+		
+		itemHeight = (items.size()>0)?items.back().getHeight():16+10;
+		canNotMoreThen =(rect.getHeight()/itemHeight)*0.45;
 		pos.set(0,0);
 	}
 	void reset()
@@ -61,8 +71,8 @@ public:
 		hightLightIdx = 0;
 		pos.set(0,0);
 		
-		currentPageX.animateTo(pos.y);
-		currentPageX.update(100);
+		currentListY.animateTo(pos.y);
+		currentListY.update(100);
 		MyScrollViewEventArgs arg;
 		arg.index = hightLightIdx;
 		ofNotifyEvent(newGUIEvent, arg);
@@ -72,17 +82,12 @@ public:
 		if(hightLightIdx<items.size()-1)
 		{
 			hightLightIdx++;
-			if(hightLightIdx>canNotMoreThen && hightLightIdx<items.size()-canNotMoreThen-1)
-				//			if(pos.y-itemHeight <= 0 && hightLightIdx<items.size()-canNotMoreThen)
+			if(hightLightIdx>canNotMoreThen && hightLightIdx<items.size()-canNotMoreThen)
 			{
 				pos.y-=itemHeight;
-				currentPageX.animateTo(pos.y);
+				currentListY.animateTo(pos.y);
 			}
-			//			else if(hightLightIdx==canNotMoreThen)
-			//			{
-			//				pos.y-=itemHeight*hightLightIdx;
-			//				currentPageX.animateTo(pos.y);
-			//			}
+			
 		}
 		MyScrollViewEventArgs arg;
 		arg.index = hightLightIdx;
@@ -94,15 +99,14 @@ public:
 		{
 			hightLightIdx--;
 			if(hightLightIdx>canNotMoreThen && hightLightIdx<items.size()-canNotMoreThen-1)
-				//			if(pos.y+itemHeight <= 0 && hightLightIdx<items.size()-canNotMoreThen)
 			{
 				pos.y+=itemHeight;
-				currentPageX.animateTo(pos.y);
+				currentListY.animateTo(pos.y);
 			}
 			else if(hightLightIdx <= canNotMoreThen)
 			{
 				pos.y=0;
-				currentPageX.animateTo(pos.y);
+				currentListY.animateTo(pos.y);
 			}
 		}
 		MyScrollViewEventArgs arg;
@@ -112,16 +116,15 @@ public:
 	void update(ofEventArgs& args)
 	{
 		float dt = 1.0f / ofGetFrameRate();
-		currentPageX.update(dt);
+		currentListY.update(dt);
 	}
 	void draw()
 	{
 		ofEnableAlphaBlending();
 		fbo.begin();
 		ofClear(0);
-		//		ofxUIScrollableCanvas::draw();
 		ofPushMatrix();
-		ofTranslate(0,currentPageX.getCurrentValue());
+		ofTranslate(0,currentListY.getCurrentValue());
 		
 		for(int i = 0 ;i < items.size(); i++)
 		{
@@ -135,18 +138,12 @@ public:
 				ofRect(0,(i*itemHeight),rect.width,itemHeight);
 				ofPopStyle();
 			}
-			ofPushStyle();
+			float itemY = (currentListY.getCurrentValue()+(i*itemHeight));
+			if(itemY>=0 && itemY < rect.height)
+			{
+				items[i].draw(0,i*itemHeight);
 			
-				ofSetColor(255);
-			ofPushMatrix();
-			ofPushStyle();
-//			ofScale(0.5,0.5);
-			font.drawString(ofToString(i),0,(i*itemHeight)+itemHeight);
-			ofPopStyle();
-			ofPopMatrix();
-			ofRectangle _rect =  font.getStringBoundingBox(items[i], 0, 0);
-			font.drawString(items[i], rect.width*0.5-_rect.width*0.5, (i*itemHeight)+itemHeight );
-			ofPopStyle();
+			}
 		}
 		ofPopMatrix();
 		fbo.end();
@@ -154,14 +151,16 @@ public:
 	}
 	ofFbo fbo;
 	ofRectangle rect;
-	vector < string > items;
+	//	vector < string > items;
 	int hightLightIdx,itemHeight;
-	int fontsize;
+	//	int fontsize;
 	ofPoint pos;
-	ofxTrueTypeFontUC font;
-	ofxAnimatableFloat currentPageX;
+	//	ofxTrueTypeFontUC font;
+	ofxAnimatableFloat currentListY;
 	int canNotMoreThen;
+	vector <ofImage> items;
 	ofEvent<MyScrollViewEventArgs> newGUIEvent;
+	
 };
 
 #endif

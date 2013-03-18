@@ -1,11 +1,21 @@
 #include "testApp.h"
 #include "Settings.h"
+ofRectangle restBtnRect;
+ofPoint readyButtonPoint;
 //--------------------------------------------------------------
 void testApp::setup(){
-	subGUIRect.set(303,230,399,722);
+	ofEnableSmoothing();
+	port = Settings::getInt("Port" , 2838);
+    host = Settings::getString("Host" , "192.168.6.133");
+	
+	
+	ofSetFrameRate(25);
+	subGUIRect.set(303,214,450,782);
+	restBtnRect.set(488,941,212,51);
+	readyButtonPoint.set(186,729);
 	// initialize the accelerometer
 	ofxAccelerometer.setup();
-	ofSetLogLevel(OF_LOG_VERBOSE);
+	ofSetLogLevel(OF_LOG_WARNING);
 	
 	//If you want a landscape oreintation
 	//iPhoneSetOrientation(OFXIPHONE_ORIENTATION_LANDSCAPE_RIGHT);
@@ -17,19 +27,37 @@ void testApp::setup(){
     setGUI3();
     setGUI4();
     setGUI5();
+
 	
-    gui1->setDrawBack(false);
-    gui2->setDrawBack(false);
-    gui3->setDrawBack(false);
-    gui4->setDrawBack(false);
-	gui5->setDrawBack(false);
-	backgrounds.push_back(ofImage("GUI/images/background01.png"));
-	backgrounds.push_back(ofImage("GUI/images/background02.png"));
-	backgrounds.push_back(ofImage("GUI/images/background03.png"));
-	backgrounds.push_back(ofImage("GUI/images/background04.png"));
+	if(scroll!=NULL)scroll->hightLightIdx =  Settings::getInt("ZONE4_LAST_PAGE" , 0);
+
 	
-	port = Settings::getInt("Port" , 2838);
-    host = Settings::getString("Host" , "192.168.6.133");
+	canvases.push_back(gui1);
+	canvases.push_back(gui2);
+	canvases.push_back(gui3);
+	canvases.push_back(gui4);
+	canvases.push_back(gui5);
+
+	for(int i = 0 ; i < canvases.size(); i++)
+	{
+		canvases[i]->loadSettings("GUI/GUI_"+ofToString(i)+"_DEFAULT_SETTING.xml");
+		vector <ofxUIWidget*> widgets = canvases[i]->getWidgetsOfType(OFX_UI_WIDGET_MULTIIMAGETOGGLE);
+		for (vector <ofxUIWidget*>::iterator it = widgets.begin(); it!= widgets.end() ; it++) {
+			(*it)->setVisible(true);
+			
+			((ofxUIMultiImageToggle*)(*it))->setLabelVisible(false);
+		}
+		canvases[i]->setDrawBack((ofGetLogLevel()==OF_LOG_VERBOSE));
+    	canvases[i]->setDrawWidgetPaddingOutline(false);
+		
+		
+		canvases[i]->setDrawWidgetPadding(false);
+	}
+	backgrounds.push_back(ofImage("GUI/images/page_zone2.png"));
+	backgrounds.push_back(ofImage("GUI/images/page_zone3.png"));
+	backgrounds.push_back(ofImage("GUI/images/page_zone4.png"));
+	backgrounds.push_back(ofImage("GUI/images/page_zone5.png"));
+	
 	
 	weConnected = tcpClient.setup(host,port);
 	//optionally set the delimiter to something else.  The delimter in the client and the server have to be the same
@@ -41,10 +69,10 @@ void testApp::setup(){
 	tcpClient.setVerbose(true);
 	
 	sFX.loadSound("CLICK17C.wav");
-	sFX.setVolume(0.5);
+	sFX.setVolume(0.1);
 	
-	retina.setNearestMagnification(); // just to make more obvious when using non-retina on a retina screen
-
+//	retina.setNearestMagnification(); // just to make more obvious when using non-retina on a retina screen
+	
 }
 void testApp::exit()
 {
@@ -52,16 +80,19 @@ void testApp::exit()
 	delete gui2;
     delete gui3;
     delete gui4;
+	delete gui5;
+
+	
 }
 void testApp::scrollEvent(MyScrollViewEventArgs &e)
 {
 	ofLogVerbose() << "scrollEvent: " << "Index: " << e.index;
 	
-	tcpClient.send("ZONE_4_MAIN_"+ofToString(e.index));
+	if(tcpClient.isConnected())tcpClient.send("ZONE_4_MAIN_"+ofToString(e.index));
 }
 bool testApp::isCoolDown()
 {
-	bool cooldown = abs(coolDown -ofGetElapsedTimef())>DURATION;
+	bool cooldown = abs(coolDown -ofGetElapsedTimef())>DEFAULT_DURATION;
 	if(cooldown)sFX.play();
 	return  cooldown;
 }
@@ -74,9 +105,30 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 {
 	string name = e.widget->getName();
 	int kind = e.widget->getKind();
+
 	ofLogVerbose() << "got event from: " << name << " kind " << kind << endl;
+	if(kind==3 && !((ofxUIButton*)e.widget)->getValue())
+	{
+		
+		if(!isCoolDown())return;
+		
+	}
+	else if (kind==30 && !((ofxUIMultiImageButton*)e.widget)->getValue())
+	{
+		
+		if(!isCoolDown())return;
+		
+	}
+	else if (kind!=3 && kind!=30){
+
+		if(!isCoolDown())return;
+		
+	}
+	
 	if(name == "ZONE2")
 	{
+
+		
 		((ofxUIToggle*)gui1->getWidget("ZONE3"))->setValue(false);
 		((ofxUIToggle*)gui1->getWidget("ZONE4"))->setValue(false);
 		((ofxUIToggle*)gui1->getWidget("ZONE5"))->setValue(false);
@@ -84,7 +136,8 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 		gui3->setVisible(false);
 		gui4->setVisible(false);
 		gui5->setVisible(false);
-//		scroll->setVisible(gui5->isVisible());
+
+		
 	}
 	else if(name == "ZONE3")
 	{
@@ -95,7 +148,9 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 		gui2->setVisible(false);
 		gui4->setVisible(false);
 		gui5->setVisible(false);
-//		scroll->setVisible(gui5->isVisible());
+		
+		
+		
 	}
 	else if(name == "ZONE4")
 	{
@@ -106,10 +161,12 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 		gui3->setVisible(false);
 		gui2->setVisible(false);
 		gui5->setVisible(false);
-		scroll->reset();
-//		scroll->setVisible(gui5->isVisible());
+		
+		
+		
+		
 	}
-
+	
 	else if(name == "ZONE5")
 	{
 		((ofxUIToggle*)gui1->getWidget("ZONE2"))->setValue(false);
@@ -119,69 +176,94 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 		gui3->setVisible(false);
 		gui2->setVisible(false);
 		gui4->setVisible(false);
-//		scroll->setVisible(gui5->isVisible());
-	}
-	if(name == "SCROLLABLE"){
-		ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
+
+		
 		
 	}
 	if(name == "BUTTON_UP"){
 		if(!((ofxUIButton*)e.widget)->getValue())
 		{
-			if(isCoolDown())
 			{
 				overHeat();
-			scroll->prevItem();
-			ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
+				scroll->prevItem();
+				ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
 			}
 		}
-//		scroll->mousePressed(ofRandom(subGUIRect.x,subGUIRect.x+subGUIRect.width), ofRandom(subGUIRect.y,subGUIRect.y+subGUIRect.height), 0);
-//		scroll->mouseDragged(ofRandom(subGUIRect.x,subGUIRect.x+subGUIRect.width), ofRandom(subGUIRect.y,subGUIRect.y+subGUIRect.height), 0);
-//		scroll->mouseReleased(ofRandom(subGUIRect.x,subGUIRect.x+subGUIRect.width), ofRandom(subGUIRect.y,subGUIRect.y+subGUIRect.height), 0);
-		
 	}
 	if(name == "BUTTON_DOWN"){
 		if(!((ofxUIButton*)e.widget)->getValue())
 		{
-			if(isCoolDown())
 			{
 				overHeat();
-			scroll->nextItem();
-			ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
+				scroll->nextItem();
+				ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
 			}
 		}
 		
 	}
-	if(name == "RESET_ALL")
+	if(name == "RESET_ALL" && !((ofxUIButton*)e.widget)->getValue())
+	{
+		for(int i = 0 ; i < canvases.size(); i++)
+		{
+			canvases[i]->loadSettings("GUI/GUI_"+ofToString(i)+"_DEFAULT_SETTING.xml");
+			vector <ofxUIWidget*> widgets = canvases[i]->getWidgetsOfType(OFX_UI_WIDGET_MULTIIMAGETOGGLE);
+			for (vector <ofxUIWidget*>::iterator it = widgets.begin(); it!= widgets.end() ; it++) {
+				(*it)->setVisible(true);
+				
+				((ofxUIMultiImageToggle*)(*it))->setLabelVisible(false);
+			}
+		}
+		scroll->reset();
+		if(tcpClient.isConnected())tcpClient.send(name);
+	}
+	
+	if(name == "Z4_READY")
 	{
 		scroll->reset();
-		tcpClient.send(name);
+		restoreDefaultSetting(3);
+		if(tcpClient.isConnected())tcpClient.send("ZONE_4_MAIN_"+ofToString(0));
 	}
-	if(name == "Z4_RESET")
+	if(name == "Z2_READY")
 	{
-		scroll->reset();
-		tcpClient.send("ZONE_4_MAIN_"+ofToString(0));
+		restoreDefaultSetting(1);
 	}
-	if(name == "Z2_RESET")
+	if(name == "Z3_READY")
 	{
+		restoreDefaultSetting(2);
 	}
-	if(name == "Z3_RESET")
+	if(name == "Z5_READY")
 	{
-	}
-	if(name == "Z5_RESET")
-	{
+		restoreDefaultSetting(4);
 	}
 
 	
 }
+void testApp::restoreDefaultSetting(int i)
+{
+	canvases[i]->loadSettings("GUI/GUI_"+ofToString(i)+"_SAVED_SETTING.xml");
+	vector <ofxUIWidget*> widgets = canvases[i]->getWidgetsOfType(OFX_UI_WIDGET_MULTIIMAGETOGGLE);
+	for (vector <ofxUIWidget*>::iterator it = widgets.begin(); it!= widgets.end() ; it++) {
+		(*it)->setVisible(true);
+		
+		((ofxUIMultiImageToggle*)(*it))->setLabelVisible(false);
+	}
+
+}
+
 //--------------------------------------------------------------
 void testApp::update(){
 	if(weConnected){
 		
-		
+		//TO-DO
+		//recieve somthing
+		string rev = tcpClient.receive();
+		ofLogNotice("tcpClient") << rev;
 		if(!tcpClient.isConnected()){
 			weConnected = false;
+			
 		}
+		
+
 	}else{
 		//if we are not connected lets try and reconnect every 5 seconds
 		deltaTime = ofGetElapsedTimeMillis() - connectTime;
@@ -189,24 +271,47 @@ void testApp::update(){
 		if( deltaTime > 5000 ){
 			weConnected = tcpClient.setup(host,port);
 			connectTime = ofGetElapsedTimeMillis();
+			if(weConnected)
+			{
+				ofLogWarning() << "Network Connected!!!";
+				connected->setVisible(true);
+				disconnected->setVisible(false);
+			}
+			else
+			{
+				ofLogWarning() << "Network Disconnected!!!";
+				connected->setVisible(false);
+				disconnected->setVisible(true);
+			}
 		}
 		
-	}	
+	}
 }
 
 //--------------------------------------------------------------
 void testApp::draw(){
-	retina.setupScreenOrtho();
-//	ofBackground(255);
+//	retina.setupScreenOrtho();
+	ofBackground(255);
 	if(gui2->isVisible())backgrounds[0].draw(0, 0);
 	if(gui3->isVisible())backgrounds[1].draw(0, 0);
 	if(gui4->isVisible())backgrounds[2].draw(0, 0);
 	if(gui5->isVisible())backgrounds[3].draw(0, 0);
+
 	//	background.draw(0,0);
 	if (gui4->isVisible()) {
 		scroll->draw();
 	}
-//	scroll->drawScrollableRect();
+//	if(weConnected)
+//	{
+//		//draw connected annotation
+//		network_status[1].draw(gui1->getRect()->x+44,gui1->getRect()->y+ 769);
+//	}
+//	else{
+//		network_status[0].draw(44,gui1->getRect()->y+ 769);
+//		//draw disconnect annotation
+//	}
+//	ofDrawBitmapString(ofToString(ofGetFrameRate()), 20,20);
+	//	scroll->drawScrollableRect();
 }
 
 
@@ -237,12 +342,29 @@ void testApp::touchCancelled(ofTouchEventArgs & touch){
 
 //--------------------------------------------------------------
 void testApp::lostFocus(){
-	
+	ofLogNotice() << "Lost Focus Save Settings";
+	for(int i = 0 ; i < canvases.size(); i++)
+	{
+		canvases[i]->saveSettings("GUI/GUI_"+ofToString(i)+"_SAVED_SETTING.xml");
+	}
+	 Settings::setInt(scroll->hightLightIdx ,"ZONE4_LAST_PAGE" );
 }
 
 //--------------------------------------------------------------
 void testApp::gotFocus(){
-	
+	ofLogNotice() << "Got Focus Load Settings";
+	for(int i = 0 ; i < canvases.size(); i++)
+	{
+		canvases[i]->loadSettings("GUI/GUI_"+ofToString(i)+"_SAVED_SETTING.xml");
+		vector <ofxUIWidget*> widgets = canvases[i]->getWidgetsOfType(OFX_UI_WIDGET_MULTIIMAGETOGGLE);
+		for (vector <ofxUIWidget*>::iterator it = widgets.begin(); it!= widgets.end() ; it++) {
+			(*it)->setVisible(true);
+			
+			((ofxUIMultiImageToggle*)(*it))->setLabelVisible(false);
+		}
+	}	port = Settings::getInt("Port" , 2838);
+    host = Settings::getString("Host" , "192.168.6.133");
+	if(scroll!=NULL)scroll->hightLightIdx =  Settings::getInt("ZONE4_LAST_PAGE" , 0);
 }
 
 //--------------------------------------------------------------
@@ -256,100 +378,185 @@ void testApp::deviceOrientationChanged(int newOrientation){
 }
 //--------------------------------------------------------------
 void testApp::setGUI1(){
-	float dim = 225;
+	float dim = 228;
 	float dim_h = 55;
 	float xInit = OFX_UI_GLOBAL_WIDGET_SPACING;
     float length = 231+xInit;
 	
-	gui1 = new ofxUICanvas(0,180, length+xInit, ofGetHeight());
-
-
-	ofxUIToggle *toggle;
-//	ofxUIMultiImageToggle *btn;
-	toggle = new ofxUIToggle("ZONE2", false, dim, dim_h,0,0);
-//	btn = new ofxUIMultiImageToggle(dim, dim_h, false, "GUI/images/button01.png", "ZONE2");
-	toggle->setLabelVisible(false);
-	toggle->setValue(true);
-	gui1->addWidget(toggle);
-	toggle = new ofxUIToggle("ZONE3", false, dim, dim_h,0,(dim_h+10));
-//	btn = new ofxUIMultiImageToggle(dim, dim_h, false, "GUI/images/button02.png", "ZONE3");
+	gui1 = new ofxUICanvas(0,182, length+xInit, ofGetHeight());
+	
+	
+	ofxUIButton *toggle;
+	//	ofxUIMultiImageToggle *btn;
+	toggle = new ofxUIButton("ZONE2", false, dim, dim_h,0,0);
 	toggle->setLabelVisible(false);
 	gui1->addWidget(toggle);
-		toggle = new ofxUIToggle("ZONE4", false, dim, dim_h,0,(dim_h+10)*2);
-//	btn = new ofxUIMultiImageToggle(dim, dim_h, false, "GUI/images/button03.png", "ZONE4");
+	toggle = new ofxUIButton("ZONE3", false, dim, dim_h,0,(dim_h+10));
 	toggle->setLabelVisible(false);
 	gui1->addWidget(toggle);
-		toggle = new ofxUIToggle("ZONE5", false, dim, dim_h,0,(dim_h+10)*3);
-//	btn = new ofxUIMultiImageToggle(dim, dim_h, false, "GUI/images/button04.png", "ZONE5");
+	toggle = new ofxUIButton("ZONE4", false, dim, dim_h,0,(dim_h+10)*2);
 	toggle->setLabelVisible(false);
 	gui1->addWidget(toggle);
-	ofxUIButton* button = new ofxUIButton("RESET_ALL", false, 150,100,42,635);
+	toggle = new ofxUIButton("ZONE5", false, dim, dim_h,0,(dim_h+10)*3);
+	toggle->setLabelVisible(false);
+	gui1->addWidget(toggle);
+	
+	ofxUIButton* button = new ofxUIButton("RESET_ALL", false, 150,100,44,636);
 	gui1->addWidget(button);
 	button->setLabelVisible(false);
 	
+	ofImage * new_img;
 	
+	new_img = new ofImage();
+	new_img->loadImage("GUI/images/network_fail.png");
+	disconnected = new ofxUIImage(44,769 , new_img->getWidth(), new_img->getHeight() , new_img, "DISCONNECTED" , false);
+	gui1->addWidget(disconnected);
+	disconnected->setVisible(true);
+	
+	new_img = new ofImage();
+	new_img->loadImage("GUI/images/network_ok.png");
+	connected = new ofxUIImage(44,769 , new_img->getWidth(), new_img->getHeight(), new_img, "CONNECTED" , false);
+	gui1->addWidget(connected);
+	connected->setVisible(false);
 	
 	ofAddListener(gui1->newGUIEvent,this,&testApp::guiEvent);
 }
 //--------------------------------------------------------------
 void testApp::setGUI2(){
-
+	
 	
 	gui2 = new ofxUICanvas(subGUIRect);
 	gui2->setVisible(true);
-		gui2->addWidgetDown(new ofxUILabel("PANEL ZONE2", OFX_UI_FONT_LARGE));
-	ofxUIToggle * togle = new ofxUIToggle("Z2_RESET", false, LARGE_GUI_WIDTH, 61);
-	togle->setLabelVisible(false);
-	gui2->addWidget(togle);
+
+
+	int startX = 217;
+	int startY = 193;
+	int padW = 112;
+	int padH = 76;
+	int pngWidth = 103;
+	int toggleWidth = 214;
+	ofxUIMultiImageToggle* toggle = new ofxUIMultiImageToggle(startX,startY, toggleWidth, 52, false, "GUI/images/button.png","ZONE2_CURTAIN");
+	toggle->setLabelVisible(false);
+	gui2->addWidget(toggle);
+
+	toggle = new ofxUIMultiImageToggle(startX,startY+padH, toggleWidth, 52, false, "GUI/images/button.png","ZONE2_LIGHT");
+	toggle->setLabelVisible(false);
+	gui2->addWidget(toggle);
+	
+	
+	ofxUIMultiImageButton*btn = new ofxUIMultiImageButton(startX,startY+padH*2, pngWidth, 52, false, "GUI/images/button_lighter.png","ZONE2_LIGHT_LIGHTER");
+	btn->setLabelVisible(false);
+	gui2->addWidget(btn);
+	
+	btn = new ofxUIMultiImageButton(startX+padW,startY+padH*2, pngWidth, 52, false, "GUI/images/button_darker.png","ZONE2_LIGHT_DARKER");
+	btn->setLabelVisible(false);
+	gui2->addWidget(btn);
+	
+	toggle = new ofxUIMultiImageToggle(startX,startY+padH*3, toggleWidth, 52, false, "GUI/images/button.png","ZONE2_DOOR_ON");
+	toggle->setLabelVisible(false);
+	gui2->addWidget(toggle);
+
+
+
+	ofxUIButton*button = new ofxUIButton("Z2_READY",false,toggleWidth, 52,readyButtonPoint.x,readyButtonPoint.y);
+	button->setLabelVisible(false);
+	gui2->addWidget(button);
 
 	
 	ofAddListener(gui2->newGUIEvent,this,&testApp::guiEvent);
 }//--------------------------------------------------------------
 void testApp::setGUI3(){
-
 	
 	gui3 = new ofxUICanvas(subGUIRect);
 	gui3->setVisible(false);
-		gui3->addWidgetDown(new ofxUILabel("PANEL ZONE3", OFX_UI_FONT_LARGE));
-	ofxUIToggle * togle = new ofxUIToggle("Z3_RESET", false, LARGE_GUI_WIDTH, 61);
-	togle->setLabelVisible(false);
-	gui3->addWidget(togle);
 
+	int startX = 217;
+	int startY = 193;
+	int padW = 112;
+	int padH = 76;
+	int pngWidth = 103;
+	int toggleWidth = 214;
+	
+//	gui3->addWidget(new ofxUILabel(0,0, "GUI3", "GUI3", OFX_UI_FONT_LARGE));
+	
+	ofxUIMultiImageToggle* toggle = new ofxUIMultiImageToggle(startX,startY, toggleWidth, 52, false, "GUI/images/button.png","ZONE3_CURTAIN");
+	toggle->setLabelVisible(false);
+	gui3->addWidget(toggle);
+	
+	toggle = new ofxUIMultiImageToggle(startX,startY+padH, toggleWidth, 52, false, "GUI/images/button.png","ZONE3_LIGHT");
+	toggle->setLabelVisible(false);
+	gui3->addWidget(toggle);
+
+	ofxUIButton*button = new ofxUIButton("Z3_READY",false,toggleWidth, 52,readyButtonPoint.x,readyButtonPoint.y);
+	button->setLabelVisible(false);
+	gui3->addWidget(button);
+	
 	ofAddListener(gui3->newGUIEvent,this,&testApp::guiEvent);
 }//--------------------------------------------------------------
 void testApp::setGUI4(){
-
-	scroll = new MyScrollview(304,408,399,301);
+	
+	scroll = new MyScrollview(304,276,400,301);
 	ofAddListener(scroll->newGUIEvent,this,&testApp::scrollEvent);
 	gui4 = new ofxUICanvas(subGUIRect);
-	
-	ofxUIToggle * togle = new ofxUIToggle("Z4_RESET", false, LARGE_GUI_WIDTH, 61);
-	togle->setLabelVisible(false);
-	gui4->addWidget(togle);
 	gui4->setVisible(false);
 	
+	int startX = 187;
+	int startY = 479;
+	int padW = 112;
+	int padH = 76;
+	int pngWidth = 103;
+
+	int toggleWidth = 214;
 	
-	ofxUIButton *button = new ofxUIButton("BUTTON_UP", false, scroll->rect.getWidth(), 61,0,113);
+	ofxUIButton *button = new ofxUIButton("BUTTON_UP", false, scroll->rect.getWidth(), 61,0,0);
 	button->setLabelVisible(false);
 	gui4->addWidget(button);
 	
 	
-	button = new ofxUIButton("BUTTON_DOWN", false, scroll->rect.getWidth(), 61,0,113+scroll->rect.getHeight()+61);
+	button = new ofxUIButton("BUTTON_DOWN", false, scroll->rect.getWidth(), 61,0,scroll->rect.getHeight()+61);
+	button->setLabelVisible(false);
+	gui4->addWidget(button);
+	
+	ofxUIMultiImageToggle* toggle = new ofxUIMultiImageToggle(startX,startY, toggleWidth, 52, false, "GUI/images/button.png","ZONE4_LIGHT");
+	toggle->setLabelVisible(false);
+	gui4->addWidget(toggle);
+	
+	toggle = new ofxUIMultiImageToggle(startX,startY+padH, toggleWidth, 52, false, "GUI/images/button.png","ZONE4_DOOR");
+	toggle->setLabelVisible(false);
+	gui4->addWidget(toggle);
+
+	
+	
+	button = new ofxUIButton("Z4_READY",false,toggleWidth, 52,readyButtonPoint.x,readyButtonPoint.y);
 	button->setLabelVisible(false);
 	gui4->addWidget(button);
 	
 	ofAddListener(gui4->newGUIEvent,this,&testApp::guiEvent);
 }//--------------------------------------------------------------
 void testApp::setGUI5(){
-
+	
 	gui5 = new ofxUICanvas(subGUIRect);
 	
-	ofxUIToggle * togle = new ofxUIToggle("Z5_RESET", false, LARGE_GUI_WIDTH, 61);
-	togle->setLabelVisible(false);
-	gui5->addWidget(togle);
+	
+	int startX = 217;
+	int startY = 193;
+	int padW = 112;
+	int padH = 76;
+	int pngWidth = 103;
+	int toggleWidth = 214;
+	
+	ofxUIMultiImageToggle* toggle = new ofxUIMultiImageToggle(startX,startY, toggleWidth, 52, false, "GUI/images/button.png","ZONE5_LIGHT");
+	toggle->setLabelVisible(false);
+	gui5->addWidget(toggle);
+	
 
+	
+	ofxUIButton*button = new ofxUIButton("Z5_READY",false,toggleWidth, 52,readyButtonPoint.x,readyButtonPoint.y);
+	button->setLabelVisible(false);
+	gui5->addWidget(button);
 	
 	gui5->setVisible(false);
 	ofAddListener(gui5->newGUIEvent,this,&testApp::guiEvent);
-
+	
 }
+

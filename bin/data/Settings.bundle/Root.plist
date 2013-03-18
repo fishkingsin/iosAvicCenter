@@ -5,8 +5,18 @@
 	<key>PreferenceSpecifiers</key>
 	<array>
 		<dict>
-			<key>AutocapitalizationType</key>
-			<string>None</string>
+			<key>Type</key>
+			<string>PSSliderSpecifier</string>
+			<key>Key</key>
+			<string>ZONE4_LAST_PAGE</string>
+			<key>DefaultValue</key>
+			<integer>0</integer>
+			<key>MinimumValue</key>
+			<integer>0</integer>
+			<key>MaximumValue</key>
+			<integer>23</integer>
+		</dict>
+		<dict>
 			<key>AutocorrectionType</key>
 			<string>No</string>
 			<key>DefaultValue</key>

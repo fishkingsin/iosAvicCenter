@@ -3,6 +3,6 @@ ofxOsc
 ofxXmlSettings
 ofxAnimatable
 ofxEasyRetina
-ofxFTGLES
 ofxSettings
+ofxTrueTypeFontUC
 ofxUI

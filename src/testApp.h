@@ -4,14 +4,14 @@
 #include "ofxiPhone.h"
 #include "ofxiPhoneExtras.h"
 //include both these files!
-#include "ofxEasyRetina.h"
+//#include "ofxEasyRetina.h"
 #include "ofxiOSEAGLView+retinaPatch.h"
 #define OF_VERSION  7
 #define OF_VERSION_MINOR 4
 #include "ofxUI.h"
 #include "ofxNetwork.h"
 #include "MyScrollview.h"
-#define DURATION 3
+//#define DEFAULT_DURATION 3
 #define LARGE_GUI_WIDTH 288
 class testApp : public ofxiPhoneApp{
 	
@@ -36,6 +36,7 @@ public:
 	void setGUI3();
 	void setGUI4();
 	void setGUI5();
+
 	
 	ofxUICanvas *gui1;
 	ofxUICanvas *gui2;
@@ -58,15 +59,18 @@ public:
 	void scrollEvent(MyScrollViewEventArgs &e);
 	float coolDown;
 	bool isCoolDown();
-void overHeat();
-ofSoundPlayer  sFX;
+	void overHeat();
+	ofSoundPlayer  sFX;
+	ofxUIImage *connected;
 	
+	ofxUIImage *disconnected;
 	
 	//declare an ofxEasyRetina instance
-	ofxEasyRetina retina;
+//	ofxEasyRetina retina;
 	
 	vector<ofVec2f> touches;
-
+	vector<ofxUICanvas*> canvases;
+	void restoreDefaultSetting(int i);
 };
 
 
