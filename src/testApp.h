@@ -11,7 +11,7 @@
 #include "ofxUI.h"
 #include "ofxNetwork.h"
 #include "MyScrollview.h"
-//#define DEFAULT_DURATION 3
+#define OVERHEAT 3
 #define LARGE_GUI_WIDTH 288
 class testApp : public ofxiPhoneApp{
 	

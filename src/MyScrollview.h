@@ -139,7 +139,7 @@ public:
 				ofPopStyle();
 			}
 			float itemY = (currentListY.getCurrentValue()+(i*itemHeight));
-			if(itemY>=0 && itemY < rect.height)
+			if(itemY>=-itemHeight && itemY < rect.height)
 			{
 				items[i].draw(0,i*itemHeight);
 			

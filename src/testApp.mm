@@ -16,6 +16,7 @@ void testApp::setup(){
 	// initialize the accelerometer
 	ofxAccelerometer.setup();
 	ofSetLogLevel(OF_LOG_WARNING);
+//    ofSetLogLevel(OF_LOG_VERBOSE);
 	
 	//If you want a landscape oreintation
 	//iPhoneSetOrientation(OFXIPHONE_ORIENTATION_LANDSCAPE_RIGHT);
@@ -62,7 +63,16 @@ void testApp::setup(){
 	weConnected = tcpClient.setup(host,port);
 	//optionally set the delimiter to something else.  The delimter in the client and the server have to be the same
 	tcpClient.setMessageDelimiter("\n");
-	
+	if(weConnected)
+    {
+        connected->setVisible(true);
+        disconnected->setVisible(false);
+    }else
+    
+    {
+        connected->setVisible(false);
+        disconnected->setVisible(true);
+    }
 	connectTime = 0;
 	deltaTime = 0;
 	
@@ -92,7 +102,8 @@ void testApp::scrollEvent(MyScrollViewEventArgs &e)
 }
 bool testApp::isCoolDown()
 {
-	bool cooldown = abs(coolDown -ofGetElapsedTimef())>DEFAULT_DURATION;
+	bool cooldown = (abs(coolDown -ofGetElapsedTimef())>OVERHEAT);
+    
 	if(cooldown)sFX.play();
 	return  cooldown;
 }
@@ -107,19 +118,19 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 	int kind = e.widget->getKind();
 
 	ofLogVerbose() << "got event from: " << name << " kind " << kind << endl;
-	if(kind==3 && !((ofxUIButton*)e.widget)->getValue())
+	if(kind==3 )
 	{
 		
 		if(!isCoolDown())return;
 		
 	}
-	else if (kind==30 && !((ofxUIMultiImageButton*)e.widget)->getValue())
+	if (kind==30)
 	{
 		
 		if(!isCoolDown())return;
 		
 	}
-	else if (kind!=3 && kind!=30){
+	if (kind!=3 && kind!=30){
 
 		if(!isCoolDown())return;
 		
@@ -180,28 +191,30 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 		
 		
 	}
-	if(name == "BUTTON_UP"){
-		if(!((ofxUIButton*)e.widget)->getValue())
+	else if(name == "BUTTON_UP"){
+        overHeat();
+//		if(!((ofxUIButton*)e.widget)->getValue())
 		{
 			{
-				overHeat();
+				
 				scroll->prevItem();
 				ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
 			}
 		}
 	}
-	if(name == "BUTTON_DOWN"){
-		if(!((ofxUIButton*)e.widget)->getValue())
+	else if(name == "BUTTON_DOWN"){
+        overHeat();
+//		if(!((ofxUIButton*)e.widget)->getValue())
 		{
 			{
-				overHeat();
+				
 				scroll->nextItem();
 				ofLogVerbose(name)<<e.widget->getRect()->getPosition().y;
 			}
 		}
 		
 	}
-	if(name == "RESET_ALL" && !((ofxUIButton*)e.widget)->getValue())
+	else if(name == "RESET_ALL" && !((ofxUIButton*)e.widget)->getValue())
 	{
 		for(int i = 0 ; i < canvases.size(); i++)
 		{
@@ -214,27 +227,42 @@ void testApp::guiEvent(ofxUIEventArgs &e)
 			}
 		}
 		scroll->reset();
-		if(tcpClient.isConnected())tcpClient.send(name);
+//		if(tcpClient.isConnected())tcpClient.send(name);
 	}
 	
-	if(name == "Z4_READY")
+	else if(name == "Z4_READY")
 	{
 		scroll->reset();
 		restoreDefaultSetting(3);
 		if(tcpClient.isConnected())tcpClient.send("ZONE_4_MAIN_"+ofToString(0));
 	}
-	if(name == "Z2_READY")
+	else if(name == "Z2_READY")
 	{
 		restoreDefaultSetting(1);
 	}
-	if(name == "Z3_READY")
+	else if(name == "Z3_READY")
 	{
 		restoreDefaultSetting(2);
 	}
-	if(name == "Z5_READY")
+	else if(name == "Z5_READY")
 	{
 		restoreDefaultSetting(4);
 	}
+    else if(kind == 31)
+    {
+        
+        if(tcpClient.isConnected())tcpClient.send(name+"_"+ofToString(((ofxUIToggle*)e.widget)->getValue()));
+    }
+    else if(kind == OFX_UI_WIDGET_BUTTON || kind == OFX_UI_WIDGET_MULTIIMAGEBUTTON)
+    {
+        
+        if(tcpClient.isConnected())tcpClient.send(name+"_"+ofToString(((ofxUIButton*)e.widget)->getValue()));
+    }
+    else
+    {
+        tcpClient.send(name);
+    }
+
 
 	
 }
@@ -257,7 +285,7 @@ void testApp::update(){
 		//TO-DO
 		//recieve somthing
 		string rev = tcpClient.receive();
-		ofLogNotice("tcpClient") << rev;
+		if(rev!="")ofLogNotice("tcpClient") << rev;
 		if(!tcpClient.isConnected()){
 			weConnected = false;
 			
@@ -452,7 +480,7 @@ void testApp::setGUI2(){
 	btn->setLabelVisible(false);
 	gui2->addWidget(btn);
 	
-	toggle = new ofxUIMultiImageToggle(startX,startY+padH*3, toggleWidth, 52, false, "GUI/images/button.png","ZONE2_DOOR_ON");
+	toggle = new ofxUIMultiImageToggle(startX,startY+padH*3, toggleWidth, 52, false, "GUI/images/button.png","ZONE2_DOOR");
 	toggle->setLabelVisible(false);
 	gui2->addWidget(toggle);
 
@@ -509,12 +537,12 @@ void testApp::setGUI4(){
 	int toggleWidth = 214;
 	
 	ofxUIButton *button = new ofxUIButton("BUTTON_UP", false, scroll->rect.getWidth(), 61,0,0);
-	button->setLabelVisible(false);
+	button->setLabelVisible(true);
 	gui4->addWidget(button);
 	
 	
 	button = new ofxUIButton("BUTTON_DOWN", false, scroll->rect.getWidth(), 61,0,scroll->rect.getHeight()+61);
-	button->setLabelVisible(false);
+	button->setLabelVisible(true);
 	gui4->addWidget(button);
 	
 	ofxUIMultiImageToggle* toggle = new ofxUIMultiImageToggle(startX,startY, toggleWidth, 52, false, "GUI/images/button.png","ZONE4_LIGHT");
